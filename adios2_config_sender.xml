@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<!--
+  ADIOS2 Configuration for WAN Data Transfer (Sender side - Utah)
+  Optimized for wide-area network transfers using SST engine
+-->
+<adios-config>
+  
+  <io name="TransferIO">
+    <engine type="SST">
+      <!-- 
+        SST (Sustainable Staging Transport) Parameters 
+        Optimized for WAN transfers between Utah and Clemson
+      -->
+      
+      <!-- Network configuration -->
+      <parameter key="RendezvousReaderCount" value="1"/>
+      <parameter key="QueueLimit" value="5"/>
+      <parameter key="QueueFullPolicy" value="Block"/>
+      
+      <!-- Data format - use BP5 for better compression and performance -->
+      <parameter key="MarshalMethod" value="BP5"/>
+      
+      <!-- Optional: Specify data channel if different from control channel -->
+      <!-- <parameter key="DataTransport" value="WAN"/> -->
+      
+      <!-- Buffer and staging parameters -->
+      <parameter key="AlwaysProvideLatestTimestep" value="false"/>
+      <parameter key="StepDistributionMode" value="AllPeersEqualLoad"/>
+      
+    </engine>
+    
+    <!-- Optional: Add compression for better network utilization -->
+    <!--
+    <variable name="data">
+      <operation type="zfp">
+        <parameter key="accuracy" value="0.001"/>
+      </operation>
+    </variable>
+    -->
+    
+  </io>
+  
+</adios-config>

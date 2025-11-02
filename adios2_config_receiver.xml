@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!--
+  ADIOS2 Configuration for WAN Data Transfer (Receiver side - Clemson)
+  Optimized for wide-area network transfers using SST engine
+-->
+<adios-config>
+  
+  <io name="TransferIO">
+    <engine type="SST">
+      <!-- 
+        SST (Sustainable Staging Transport) Parameters 
+        Receiver configuration for WAN transfers
+      -->
+      
+      <!-- Network configuration -->
+      <parameter key="RendezvousReaderCount" value="1"/>
+      
+      <!-- Data format - use BP5 for better compression and performance -->
+      <parameter key="MarshalMethod" value="BP5"/>
+      
+      <!-- Timeout settings for WAN (longer timeouts for cross-country transfers) -->
+      <parameter key="OpenTimeoutSecs" value="300"/>
+      
+      <!-- Buffer and staging parameters -->
+      <parameter key="AlwaysProvideLatestTimestep" value="false"/>
+      
+    </engine>
+  </io>
+  
+</adios-config>
