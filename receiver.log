@@ -1,0 +1,29 @@
+=== ADIOS2 Data Receiver (Clemson) ===
+Contact file: data-transfer.sst
+MPI Ranks: 1
+Waiting for data from sender...
+============================================================
+Step   0 | Time:    0.140 s | Size:    76.29 MB | Throughput:   546.51 MB/s | Latency:    0.281 s
+  ✓ Data validation passed
+Step   1 | Time:    0.098 s | Size:    76.29 MB | Throughput:   780.94 MB/s | Latency:    0.232 s
+Step   2 | Time:    0.141 s | Size:    76.29 MB | Throughput:   541.48 MB/s | Latency:    0.262 s
+Step   3 | Time:    0.097 s | Size:    76.29 MB | Throughput:   789.95 MB/s | Latency:    0.233 s
+Step   4 | Time:    0.099 s | Size:    76.29 MB | Throughput:   771.53 MB/s | Latency:    0.222 s
+Step   5 | Time:    0.097 s | Size:    76.29 MB | Throughput:   787.16 MB/s | Latency:    0.182 s
+Step   6 | Time:    0.095 s | Size:    76.29 MB | Throughput:   801.71 MB/s | Latency:    0.171 s
+Step   7 | Time:    0.094 s | Size:    76.29 MB | Throughput:   812.05 MB/s | Latency:    0.173 s
+Step   8 | Time:    0.138 s | Size:    76.29 MB | Throughput:   552.25 MB/s | Latency:    0.216 s
+Step   9 | Time:    0.079 s | Size:    76.29 MB | Throughput:   962.88 MB/s | Latency:    0.180 s
+============================================================
+=== Reception Complete ===
+Total steps received: 10
+Total time: 2.136 seconds
+
+=== Performance Metrics ===
+Total data received: 762.94 MB
+Average throughput: 357.11 MB/s
+Average throughput: 2856.84 Mbps
+Min/Max step throughput: 541.48 / 962.88 MB/s
+Min/Max step time: 0.079 / 0.141 s
+
+Detailed metrics saved to: transfer_metrics.csv

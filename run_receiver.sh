@@ -1,38 +1,40 @@
 #!/bin/bash
 # run_receiver.sh - Start receiver on Clemson
-# Usage: ./run_receiver.sh [contact-file-path]
+# Usage: ./run_receiver.sh <contact-file-from-sender>
 
-CONTACT_FILE="${1:-data-transfer.sst}"
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <contact-file>"
+    echo ""
+    echo "Example:"
+    echo "  # First, copy contact file from sender:"
+    echo "  scp sender-host:/path/to/data-transfer.sst ./"
+    echo ""
+    echo "  # Then run receiver:"
+    echo "  $0 data-transfer.sst"
+    exit 1
+fi
+
+CONTACT_FILE="$1"
+
+if [ ! -f "$CONTACT_FILE" ]; then
+    echo "ERROR: Contact file not found: $CONTACT_FILE"
+    echo ""
+    echo "Please copy the contact file from the sender machine first:"
+    echo "  scp sender-host:/path/to/contact-file ./"
+    exit 1
+fi
 
 echo "=== ADIOS2 Receiver (Clemson) ==="
-echo "Contact file will be: $PWD/$CONTACT_FILE"
+echo "Using contact file: $CONTACT_FILE"
 echo ""
 
-# Clean up old contact files
-rm -f "$CONTACT_FILE" "${CONTACT_FILE}."* 2>/dev/null
-
-# Set contact file location
-export ADIOS2_SST_CONTACT_INFO_FILE="$PWD/$CONTACT_FILE"
-
-# Display instructions
-echo "=========================================="
-echo "Receiver will create contact file:"
-echo "  $PWD/$CONTACT_FILE"
-echo ""
-echo "On sender machine (Utah), run:"
-echo "  scp $(hostname):$PWD/$CONTACT_FILE /path/to/sender/directory/"
-echo "=========================================="
-echo ""
-
-# Run receiver
-./receiver
+# Run receiver - pass the contact file name without .sst extension
+CONTACT_NAME="${CONTACT_FILE%.sst}"
+./build/receiver "$CONTACT_NAME"
 
 EXIT_CODE=$?
 
 echo ""
 echo "Receiver finished with exit code: $EXIT_CODE"
-
-# Clean up
-rm -f "$CONTACT_FILE" "${CONTACT_FILE}."* 2>/dev/null
 
 exit $EXIT_CODE

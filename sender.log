@@ -1,0 +1,25 @@
+Warning:  Preferred DataPlane "sockets" not found.
+=== ADIOS2 Data Sender (Utah) ===
+Contact file: data-transfer.sst
+MPI Ranks: 1
+Array size per rank: 10000000 elements
+Total data per step: 76.2939 MB
+Number of steps: 10
+Starting data transmission...
+============================================================
+Step   0 | Time:    0.152 s | Size:    76.29 MB | Throughput:   502.37 MB/s
+Step   1 | Time:    0.181 s | Size:    76.29 MB | Throughput:   421.05 MB/s
+Step   2 | Time:    0.184 s | Size:    76.29 MB | Throughput:   414.14 MB/s
+Step   3 | Time:    0.174 s | Size:    76.29 MB | Throughput:   438.18 MB/s
+Step   4 | Time:    0.189 s | Size:    76.29 MB | Throughput:   403.62 MB/s
+Step   5 | Time:    0.182 s | Size:    76.29 MB | Throughput:   420.16 MB/s
+Step   6 | Time:    0.179 s | Size:    76.29 MB | Throughput:   427.04 MB/s
+Step   7 | Time:    0.180 s | Size:    76.29 MB | Throughput:   423.49 MB/s
+Step   8 | Time:    0.180 s | Size:    76.29 MB | Throughput:   423.41 MB/s
+Step   9 | Time:    0.203 s | Size:    76.29 MB | Throughput:   375.60 MB/s
+============================================================
+=== Transfer Complete ===
+Total time: 1.910 seconds
+Total data: 762.94 MB
+Average throughput: 399.43 MB/s
+Average throughput: 3195.43 Mbps
