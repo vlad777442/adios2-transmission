@@ -35,6 +35,13 @@ int main(int argc, char *argv[])
         // Set engine for reading
         io.SetEngine("SST");
         
+        // Set parameters for WAN
+        io.SetParameters({
+            {"ControlTransport", "sockets"},
+            {"DataTransport", "sockets"},
+            {"OpenTimeoutSecs", "300"}
+        });
+        
         // Open engine for reading (contact file name can be specified)
         adios2::Engine reader = io.Open(contactFile, adios2::Mode::Read);
         

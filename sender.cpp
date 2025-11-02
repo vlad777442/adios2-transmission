@@ -44,7 +44,10 @@ int main(int argc, char *argv[])
         io.SetParameters({
             {"RendezvousReaderCount", "1"},
             {"QueueLimit", "5"},
-            {"QueueFullPolicy", "Block"}
+            {"QueueFullPolicy", "Block"},
+            {"ControlTransport", "sockets"},  // Use TCP sockets for WAN
+            {"DataTransport", "sockets"},
+            {"OpenTimeoutSecs", "300"}        // 5 minute timeout for WAN
         });
         
         // Define the data variable
