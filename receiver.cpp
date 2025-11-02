@@ -19,6 +19,12 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     
+    // Parse command line arguments
+    std::string contactFile = "data-transfer"; // default name
+    if (argc > 1) {
+        contactFile = argv[1];
+    }
+    
     try {
         // Initialize ADIOS2
         adios2::ADIOS adios(MPI_COMM_WORLD);
@@ -29,11 +35,12 @@ int main(int argc, char *argv[])
         // Set engine for reading
         io.SetEngine("SST");
         
-        // Open engine for reading
-        adios2::Engine reader = io.Open("data-transfer", adios2::Mode::Read);
+        // Open engine for reading (contact file name can be specified)
+        adios2::Engine reader = io.Open(contactFile, adios2::Mode::Read);
         
         if (rank == 0) {
             std::cout << "=== ADIOS2 Data Receiver (Clemson) ===" << std::endl;
+            std::cout << "Contact file: " << contactFile << ".sst" << std::endl;
             std::cout << "MPI Ranks: " << size << std::endl;
             std::cout << "Waiting for data from sender..." << std::endl;
             std::cout << std::string(60, '=') << std::endl;

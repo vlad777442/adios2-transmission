@@ -19,6 +19,12 @@ int main(int argc, char *argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     
+    // Parse command line arguments
+    std::string contactFile = "data-transfer"; // default name
+    if (argc > 1) {
+        contactFile = argv[1];
+    }
+    
     // Configuration parameters
     const size_t arraySize = 10000000;  // 10M elements (~40 MB per step)
     const size_t numSteps = 10;          // Number of timesteps to send
@@ -53,11 +59,12 @@ int main(int argc, char *argv[])
         adios2::Variable<size_t> varStep = io.DefineVariable<size_t>("step");
         adios2::Variable<double> varTimestamp = io.DefineVariable<double>("timestamp");
         
-        // Open engine for writing
-        adios2::Engine writer = io.Open("data-transfer", adios2::Mode::Write);
+        // Open engine for writing (contact file name can be specified)
+        adios2::Engine writer = io.Open(contactFile, adios2::Mode::Write);
         
         if (rank == 0) {
             std::cout << "=== ADIOS2 Data Sender (Utah) ===" << std::endl;
+            std::cout << "Contact file: " << contactFile << ".sst" << std::endl;
             std::cout << "MPI Ranks: " << size << std::endl;
             std::cout << "Array size per rank: " << arraySize << " elements" << std::endl;
             std::cout << "Total data per step: " << (size * arraySize * sizeof(double)) / (1024.0 * 1024.0) << " MB" << std::endl;
