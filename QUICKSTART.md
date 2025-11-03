@@ -7,82 +7,70 @@
 
 ## Step-by-Step Instructions
 
-### 🔵 **On Clemson Machine (Receiver)**
+### � **On Utah Machine (Sender) — run this FIRST**
 
 ```bash
-# 1. Go to build directory
-cd /path/to/adios2-transmission/build
+# 1. Go to project root
+cd /users/vlad777/research/adios2-transmission
 
-# 2. Start receiver (it will wait for sender)
-../run_receiver.sh
+# 2. Start the sender to create the contact file
+./run_sender.sh
 
-# Output will show:
-#   Contact file will be: /path/to/build/data-transfer.sst
-#   On sender machine (Utah), run:
-#     scp clemson-host:/path/to/build/data-transfer.sst ...
+# Sender prints where it wrote the file, e.g.
+#   /users/vlad777/research/build/data-transfer.sst
 ```
 
-**Leave this terminal running!** The receiver is now waiting.
+Leave the sender running until it finishes creating the contact file (you can Ctrl+C once the `.sst` file appears).
+
+```bash
+# 3. Copy the contact file to the receiver node
+cd /users/vlad777/research/build
+scp data-transfer.sst vlad777@node0.vlad777-277123.scidm-pg0.clemson.cloudlab.us:/users/vlad777/research/adios2-transmission/build/
+```
+
+Adjust the hostnames or paths as needed for your environment.
 
 ---
 
-### 🔴 **On Utah Machine (Sender)**
-
-Open a NEW terminal/session:
+### � **On Clemson Machine (Receiver) — run this SECOND**
 
 ```bash
-# 1. Copy contact file from Clemson
-scp user@clemson-host:/path/to/build/data-transfer.sst ./
+# 1. Log in to the receiver node
+ssh vlad777@node0.vlad777-277123.scidm-pg0.clemson.cloudlab.us
 
-# Example with real hostnames:
-# scp vlad@palmetto.clemson.edu:/home/vlad/research/build/data-transfer.sst ./
+# 2. Go to the project root
+cd /users/vlad777/research/adios2-transmission
 
-# 2. Verify file was copied
-ls -la data-transfer.sst
+# 3. Ensure the copied contact file exists in the build directory
+ls -la build/data-transfer.sst
 
-# 3. Start sender
-../run_sender.sh data-transfer.sst
+# 4. Start the receiver, pointing at the same contact name
+./run_receiver.sh
 ```
 
-The transfer will begin immediately!
-
----
-
-## Alternative: One Command from Utah
-
-If you prefer, you can do everything from Utah:
-
-```bash
-# Terminal 1: Start receiver on Clemson via SSH
-ssh user@clemson-host 'cd /path/to/build && ../run_receiver.sh' &
-
-# Wait a few seconds for receiver to start
-sleep 5
-
-# Terminal 2: Copy contact file and run sender
-scp user@clemson-host:/path/to/build/data-transfer.sst ./
-../run_sender.sh data-transfer.sst
-```
+When the receiver starts, it reads the copied contact file and immediately connects to the sender.
 
 ---
 
 ## Manual Method (No Scripts)
 
-### On Clemson:
+### On Utah (Sender):
 ```bash
-cd build
-export ADIOS2_SST_CONTACT_INFO_FILE=$PWD/data-transfer.sst
-./receiver
+cd /users/vlad777/research/adios2-transmission/build
+./sender
+# Wait until the program creates data-transfer.sst (Ctrl+C if you only need the file)
 ```
 
-### On Utah:
+### Copy the contact file:
 ```bash
-# Copy contact file
-scp clemson:/path/to/build/data-transfer.sst ./
+scp data-transfer.sst vlad777@node0.vlad777-277123.scidm-pg0.clemson.cloudlab.us:/users/vlad777/research/adios2-transmission/build/
+```
 
-cd build
-export ADIOS2_SST_CONTACT_INFO_FILE=$PWD/data-transfer.sst
-./sender
+### On Clemson (Receiver):
+```bash
+cd /users/vlad777/research/adios2-transmission
+ls -la build/data-transfer.sst   # verify the file was copied
+./receiver data-transfer         # reads build/data-transfer.sst
 ```
 
 ---
@@ -103,8 +91,8 @@ If behind strict firewall, you may need to:
 ## Troubleshooting
 
 **"Contact file not found"**
-- Make sure receiver is running first
-- Check the path is correct when copying with scp
+- Make sure you ran the sender first and copied `data-transfer.sst`
+- Verify the receiver is looking in the same directory (`build/` by default)
 
 **"Connection timeout"**
 - Check network connectivity: `ping clemson-host`
