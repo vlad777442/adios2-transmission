@@ -21,33 +21,66 @@ int main(int argc, char *argv[])
     
     // Parse command line arguments
     std::string contactFile = "data-transfer"; // default name
+    std::string outputFile = "received_data.bp"; // default output
+    bool useContactString = false;
+    std::string contactString = "";
+    
     if (argc > 1) {
-        contactFile = argv[1];
+        std::string arg1 = argv[1];
+        // Check if it's an SST connection string (starts with typical SST format)
+        if (arg1.find("0x") != std::string::npos || arg1.find(":") != std::string::npos) {
+            useContactString = true;
+            contactString = arg1;
+            contactFile = "receiver-connection"; // dummy name
+        } else {
+            contactFile = arg1;
+        }
+    }
+    if (argc > 2) {
+        outputFile = argv[2];
     }
     
     try {
         // Initialize ADIOS2
         adios2::ADIOS adios(MPI_COMM_WORLD);
         
-        // Declare IO
-        adios2::IO io = adios.DeclareIO("TransferIO");
+        // Declare IO for reading
+        adios2::IO ioRead = adios.DeclareIO("TransferIO");
         
         // Set engine for reading
-        io.SetEngine("SST");
+        ioRead.SetEngine("SST");
         
         // Set parameters for WAN
-        io.SetParameters({
+        ioRead.SetParameters({
             {"ControlTransport", "sockets"},
             {"DataTransport", "sockets"},
             {"OpenTimeoutSecs", "300"}
         });
         
+        // If using connection string directly, write it to a temporary file
+        if (useContactString && rank == 0) {
+            std::ofstream sstFile(contactFile + ".sst");
+            sstFile << "#ADIOS2-SST v0\n" << contactString << std::endl;
+            sstFile.close();
+        }
+        MPI_Barrier(MPI_COMM_WORLD); // Wait for file to be written
+        
         // Open engine for reading (contact file name can be specified)
-        adios2::Engine reader = io.Open(contactFile, adios2::Mode::Read);
+        adios2::Engine reader = ioRead.Open(contactFile, adios2::Mode::Read);
+        
+        // Declare IO for writing received data to BP file
+        adios2::IO ioWrite = adios.DeclareIO("WriteIO");
+        ioWrite.SetEngine("BP5");
+        adios2::Engine writer = ioWrite.Open(outputFile, adios2::Mode::Write);
         
         if (rank == 0) {
             std::cout << "=== ADIOS2 Data Receiver (Clemson) ===" << std::endl;
-            std::cout << "Contact file: " << contactFile << ".sst" << std::endl;
+            if (useContactString) {
+                std::cout << "Using SST connection string from command line" << std::endl;
+            } else {
+                std::cout << "Contact file: " << contactFile << ".sst" << std::endl;
+            }
+            std::cout << "Output file: " << outputFile << std::endl;
             std::cout << "MPI Ranks: " << size << std::endl;
             std::cout << "Waiting for data from sender..." << std::endl;
             std::cout << std::string(60, '=') << std::endl;
@@ -71,10 +104,13 @@ int main(int argc, char *argv[])
             
             auto stepStart = std::chrono::high_resolution_clock::now();
             
+            // Begin writing step
+            writer.BeginStep();
+            
             // Inquire about variables
-            auto varData = io.InquireVariable<double>("data");
-            auto varStep = io.InquireVariable<size_t>("step");
-            auto varTimestamp = io.InquireVariable<double>("timestamp");
+            auto varData = ioRead.InquireVariable<double>("data");
+            auto varStep = ioRead.InquireVariable<size_t>("step");
+            auto varTimestamp = ioRead.InquireVariable<double>("timestamp");
             
             if (!varData) {
                 if (rank == 0) {
@@ -113,6 +149,29 @@ int main(int argc, char *argv[])
             
             // End step (synchronizes the read)
             reader.EndStep();
+            
+            // Write received data to output BP file
+            auto varDataOut = ioWrite.DefineVariable<double>(
+                "data",
+                {totalSize},
+                {offset},
+                {localSize}
+            );
+            writer.Put(varDataOut, data.data());
+            
+            // Write metadata (only on rank 0)
+            if (rank == 0) {
+                if (varStep) {
+                    auto varStepOut = ioWrite.DefineVariable<size_t>("step");
+                    writer.Put(varStepOut, step);
+                }
+                if (varTimestamp) {
+                    auto varTimestampOut = ioWrite.DefineVariable<double>("timestamp");
+                    writer.Put(varTimestampOut, sendTimestamp);
+                }
+            }
+            
+            writer.EndStep();
             
             auto stepEnd = std::chrono::high_resolution_clock::now();
             auto stepDuration = std::chrono::duration<double>(stepEnd - stepStart).count();
@@ -161,6 +220,7 @@ int main(int argc, char *argv[])
         }
         
         reader.Close();
+        writer.Close();
         
         auto overallEnd = std::chrono::high_resolution_clock::now();
         auto totalDuration = std::chrono::duration<double>(overallEnd - overallStart).count();
@@ -208,6 +268,7 @@ int main(int argc, char *argv[])
                 }
                 metricsFile.close();
                 std::cout << "\nDetailed metrics saved to: transfer_metrics.csv" << std::endl;
+                std::cout << "Received data saved to: " << outputFile << std::endl;
             }
         }
         

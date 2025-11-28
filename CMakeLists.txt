@@ -18,6 +18,13 @@ target_link_libraries(sender
     MPI::MPI_CXX
 )
 
+# Sender from BP file executable
+add_executable(sender_from_bp sender_from_bp.cpp)
+target_link_libraries(sender_from_bp 
+    adios2::adios2
+    MPI::MPI_CXX
+)
+
 # Receiver executable
 add_executable(receiver receiver.cpp)
 target_link_libraries(receiver 
