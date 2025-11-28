@@ -58,43 +58,49 @@ int main(int argc, char *argv[])
             {"MarshalMethod", "BP5"}
         });
         
-        adios2::Engine writer = ioWrite.Open(contactFile, adios2::Mode::Write);
-        
         if (rank == 0) {
             std::cout << "=== ADIOS2 BP File Relay Sender ===" << std::endl;
             std::cout << "Input BP file: " << inputFile << std::endl;
-            std::cout << "Contact file: " << contactFile << ".sst" << std::endl;
             std::cout << "MPI Ranks: " << size << std::endl;
-            std::cout << std::string(60, '=') << std::endl;
-            
-            // Wait a moment for SST file to be created
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            
-            // Read and display SST connection string
-            std::ifstream sstFile(contactFile + ".sst");
-            if (sstFile.is_open()) {
-                std::string line;
-                std::getline(sstFile, line); // Skip first line (#ADIOS2-SST v0)
-                std::getline(sstFile, line); // Get connection string
-                sstFile.close();
-                
-                if (!line.empty()) {
-                    std::cout << "\n*** SST CONNECTION STRING ***" << std::endl;
-                    std::cout << line << std::endl;
-                    std::cout << "\nCopy the above string and run on receiver:" << std::endl;
-                    std::cout << "  ./build/receiver \"" << line << "\"" << std::endl;
-                    std::cout << std::string(60, '=') << std::endl;
-                    std::cout << "\nPress Enter to continue after starting receiver..." << std::endl;
-                    std::cin.get();
-                }
-            }
-            
-            std::cout << "Waiting for receiver to connect..." << std::endl;
+            std::cout << "Creating SST connection file..." << std::endl;
             std::cout << std::string(60, '=') << std::endl;
         }
         
-        // Synchronize all ranks before proceeding
-        MPI_Barrier(MPI_COMM_WORLD);
+        // Start a thread to monitor and display SST connection string
+        std::thread sstMonitor;
+        if (rank == 0) {
+            sstMonitor = std::thread([contactFile]() {
+                // Wait for SST file to be created
+                std::string sstFileName = contactFile + ".sst";
+                for (int i = 0; i < 30; i++) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                    std::ifstream sstFile(sstFileName);
+                    if (sstFile.is_open()) {
+                        std::string line;
+                        std::getline(sstFile, line); // Skip first line
+                        std::getline(sstFile, line); // Get connection string
+                        sstFile.close();
+                        
+                        if (!line.empty()) {
+                            std::cout << "\n*** SST CONNECTION STRING ***" << std::endl;
+                            std::cout << line << std::endl;
+                            std::cout << "\nRun this on receiver machine (choose your MPI ranks):" << std::endl;
+                            std::cout << "  mpirun -np <num_ranks> ./receiver \"" << line << "\"" << std::endl;
+                            std::cout << std::string(60, '=') << std::endl;
+                            std::cout << "\nWaiting for receiver to connect..." << std::endl;
+                            std::cout << std::string(60, '=') << std::endl;
+                            break;
+                        }
+                    }
+                }
+            });
+        }
+        
+        adios2::Engine writer = ioWrite.Open(contactFile, adios2::Mode::Write);
+        
+        if (rank == 0 && sstMonitor.joinable()) {
+            sstMonitor.join();
+        }
         
         auto overallStart = std::chrono::high_resolution_clock::now();
         size_t stepCount = 0;

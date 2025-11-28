@@ -6,10 +6,12 @@
 #include <adios2.h>
 #include <iostream>
 #include <vector>
+#include <map>
 #include <chrono>
 #include <iomanip>
 #include <fstream>
 #include <mpi.h>
+#include <algorithm>
 
 int main(int argc, char *argv[])
 {
@@ -94,6 +96,10 @@ int main(int argc, char *argv[])
         auto overallStart = std::chrono::high_resolution_clock::now();
         size_t stepCount = 0;
         
+        // Track defined output variables to avoid redefining
+        std::map<std::string, adios2::Variable<double>> definedDoubleVars;
+        std::map<std::string, adios2::Variable<int32_t>> definedInt32Vars;
+        
         // Receive data for all available steps
         while (true) {
             auto stepStatus = reader.BeginStep();
@@ -107,113 +113,136 @@ int main(int argc, char *argv[])
             // Begin writing step
             writer.BeginStep();
             
-            // Inquire about variables
-            auto varData = ioRead.InquireVariable<double>("data");
-            auto varStep = ioRead.InquireVariable<size_t>("step");
-            auto varTimestamp = ioRead.InquireVariable<double>("timestamp");
+            double stepSizeMB = 0.0;
             
-            if (!varData) {
-                if (rank == 0) {
-                    std::cerr << "Error: Variable 'data' not found!" << std::endl;
+            // Get all available variables
+            auto variables = ioRead.AvailableVariables();
+            
+            if (rank == 0 && stepCount == 0) {
+                std::cout << "Found " << variables.size() << " variables to receive" << std::endl;
+            }
+            
+            // Process each variable
+            for (const auto& varPair : variables) {
+                const std::string& varName = varPair.first;
+                const auto& varInfo = varPair.second;
+                
+                auto typeIt = varInfo.find("Type");
+                if (typeIt == varInfo.end()) continue;
+                const std::string& varType = typeIt->second;
+                
+                // Handle double variables
+                if (varType == "double") {
+                    auto varIn = ioRead.InquireVariable<double>(varName);
+                    if (!varIn) continue;
+                    auto shape = varIn.Shape();
+                    if (shape.empty()) continue; // Skip scalars
+                    
+                    size_t totalSize = 1;
+                    for (auto dim : shape) totalSize *= dim;
+                    
+                    if (shape.size() >= 1) {
+                        size_t dim0 = shape[0];
+                        size_t elementsPerSlice = totalSize / dim0;
+                        size_t slicesPerRank = dim0 / size;
+                        size_t remainder = dim0 % size;
+                        size_t sliceStart = rank * slicesPerRank + std::min(static_cast<size_t>(rank), remainder);
+                        size_t sliceCount = slicesPerRank + (rank < remainder ? 1 : 0);
+                        
+                        if (sliceCount > 0) {
+                            size_t localSize = sliceCount * elementsPerSlice;
+                            adios2::Dims start(shape.size(), 0);
+                            adios2::Dims count = shape;
+                            start[0] = sliceStart;
+                            count[0] = sliceCount;
+                            
+                            varIn.SetSelection({start, count});
+                            std::vector<double> data(localSize);
+                            reader.Get(varIn, data.data(), adios2::Mode::Sync);
+                            
+                            if (stepCount == 0) {
+                                definedDoubleVars[varName] = ioWrite.DefineVariable<double>(
+                                    varName, shape, start, count
+                                );
+                            }
+                            writer.Put(definedDoubleVars[varName], data.data(), adios2::Mode::Sync);
+                            stepSizeMB += (localSize * sizeof(double)) / (1024.0 * 1024.0);
+                        }
+                    }
                 }
-                break;
+                // Handle int32_t variables
+                else if (varType == "int32_t") {
+                    auto varIn = ioRead.InquireVariable<int32_t>(varName);
+                    if (!varIn) continue;
+                    
+                    auto shape = varIn.Shape();
+                    if (shape.empty() || (shape.size() == 1 && shape[0] == 1)) {
+                        if (rank == 0) {
+                            int32_t value;
+                            reader.Get(varIn, &value, adios2::Mode::Sync);
+                            if (stepCount == 0) {
+                                definedInt32Vars[varName] = ioWrite.DefineVariable<int32_t>(varName);
+                            }
+                            writer.Put(definedInt32Vars[varName], value, adios2::Mode::Sync);
+                        }
+                    } else {
+                        size_t totalSize = 1;
+                        for (auto dim : shape) totalSize *= dim;
+                        
+                        // Distribute along first dimension
+                        size_t dim0 = shape[0];
+                        size_t elementsPerSlice = totalSize / dim0;
+                        size_t slicesPerRank = dim0 / size;
+                        size_t remainder = dim0 % size;
+                        size_t sliceStart = rank * slicesPerRank + std::min(static_cast<size_t>(rank), remainder);
+                        size_t sliceCount = slicesPerRank + (rank < remainder ? 1 : 0);
+                        
+                        if (sliceCount > 0) {
+                            size_t localSize = sliceCount * elementsPerSlice;
+                            
+                            adios2::Dims start(shape.size(), 0);
+                            adios2::Dims count = shape;
+                            start[0] = sliceStart;
+                            count[0] = sliceCount;
+                            
+                            varIn.SetSelection({start, count});
+                            std::vector<int32_t> data(localSize);
+                            reader.Get(varIn, data.data(), adios2::Mode::Sync);
+                            
+                            if (stepCount == 0) {
+                                definedInt32Vars[varName] = ioWrite.DefineVariable<int32_t>(
+                                    varName, shape, start, count
+                                );
+                            }
+                            writer.Put(definedInt32Vars[varName], data.data(), adios2::Mode::Sync);
+                            stepSizeMB += (localSize * sizeof(int32_t)) / (1024.0 * 1024.0);
+                        }
+                    }
+                }
             }
             
-            // Get the shape of the data
-            auto shape = varData.Shape();
-            size_t totalSize = shape[0];
-            size_t localSize = totalSize / size;
-            size_t offset = rank * localSize;
+            // Sum up total step size across ranks
+            double globalStepSizeMB = 0.0;
+            MPI_Reduce(&stepSizeMB, &globalStepSizeMB, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
             
-            // Handle remainder for last rank
-            if (rank == size - 1) {
-                localSize = totalSize - offset;
-            }
-            
-            // Set selection for this rank
-            varData.SetSelection({{offset}, {localSize}});
-            
-            // Allocate buffer
-            std::vector<double> data(localSize);
-            
-            // Read data
-            reader.Get(varData, data.data());
-            
-            // Read metadata (only on rank 0)
-            size_t step = 0;
-            double sendTimestamp = 0.0;
-            if (rank == 0 && varStep && varTimestamp) {
-                reader.Get(varStep, &step);
-                reader.Get(varTimestamp, &sendTimestamp);
-            }
-            
-            // End step (synchronizes the read)
             reader.EndStep();
-            
-            // Write received data to output BP file
-            auto varDataOut = ioWrite.DefineVariable<double>(
-                "data",
-                {totalSize},
-                {offset},
-                {localSize}
-            );
-            writer.Put(varDataOut, data.data());
-            
-            // Write metadata (only on rank 0)
-            if (rank == 0) {
-                if (varStep) {
-                    auto varStepOut = ioWrite.DefineVariable<size_t>("step");
-                    writer.Put(varStepOut, step);
-                }
-                if (varTimestamp) {
-                    auto varTimestampOut = ioWrite.DefineVariable<double>("timestamp");
-                    writer.Put(varTimestampOut, sendTimestamp);
-                }
-            }
-            
             writer.EndStep();
             
             auto stepEnd = std::chrono::high_resolution_clock::now();
             auto stepDuration = std::chrono::duration<double>(stepEnd - stepStart).count();
             
-            // Calculate metrics
-            double stepSizeMB = (totalSize * sizeof(double)) / (1024.0 * 1024.0);
-            double throughputMBps = stepSizeMB / stepDuration;
-            
             if (rank == 0) {
-                auto now = std::chrono::system_clock::now();
-                auto recvTimestamp = std::chrono::duration<double>(now.time_since_epoch()).count();
-                double latency = recvTimestamp - sendTimestamp;
+                double throughputMBps = globalStepSizeMB / stepDuration;
                 
                 std::cout << "Step " << std::setw(3) << stepCount 
                           << " | Time: " << std::fixed << std::setprecision(3) << std::setw(8) << stepDuration << " s"
-                          << " | Size: " << std::setw(8) << std::setprecision(2) << stepSizeMB << " MB"
-                          << " | Throughput: " << std::setw(8) << std::setprecision(2) << throughputMBps << " MB/s";
-                
-                if (sendTimestamp > 0) {
-                    std::cout << " | Latency: " << std::setw(8) << std::setprecision(3) << latency << " s";
-                }
-                std::cout << std::endl;
+                          << " | Size: " << std::setw(8) << std::setprecision(2) << globalStepSizeMB << " MB"
+                          << " | Throughput: " << std::setw(8) << std::setprecision(2) << throughputMBps << " MB/s"
+                          << std::endl;
                 
                 stepTimes.push_back(stepDuration);
-                stepSizes.push_back(stepSizeMB);
+                stepSizes.push_back(globalStepSizeMB);
                 stepThroughputs.push_back(throughputMBps);
-            }
-            
-            // Validate data (optional - check a few values)
-            if (rank == 0 && stepCount == 0) {
-                // Verify first few values of first step
-                bool dataValid = true;
-                for (size_t i = 0; i < std::min(size_t(10), localSize); ++i) {
-                    double expected = step + static_cast<double>(i) / totalSize * size;
-                    if (std::abs(data[i] - expected) > 1e-6) {
-                        dataValid = false;
-                        break;
-                    }
-                }
-                if (dataValid) {
-                    std::cout << "  ✓ Data validation passed" << std::endl;
-                }
             }
             
             stepCount++;
