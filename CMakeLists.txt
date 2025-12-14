@@ -32,6 +32,13 @@ target_link_libraries(receiver
     MPI::MPI_CXX
 )
 
+# Gray-Scott simulation with SST streaming
+add_executable(gs_sender gs_sender.cpp)
+target_link_libraries(gs_sender 
+    adios2::adios2
+    MPI::MPI_CXX
+)
+
 # Set output directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
