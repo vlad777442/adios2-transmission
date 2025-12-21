@@ -1,0 +1,10 @@
+ranks,nodes,grid_size,total_steps,output_interval,total_time_s,outputs,avg_output_time_s,avg_throughput_MBps
+1,single_node,64,200,50,7.488,5,1.4976,2.67
+2,single_node,64,200,50,4.576,5,.9152,4.37
+4,single_node,64,200,50,2.342,5,.4684,8.53
+8,single_node,64,200,50,2.235,5,.4470,8.94
+4,multi_node,64,200,50,2.661,5,.5322,7.51
+6,multi_node,64,200,50,2.416,5,.4832,8.27
+8,multi_node,64,200,50,3.668,5,.7336,5.45
+12,multi_node,64,200,50,2.886,5,.5772,6.93
+16,multi_node,64,200,50,2.972,5,.5944,6.72

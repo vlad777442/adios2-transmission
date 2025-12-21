@@ -1,0 +1,8 @@
+# MPI Hostfile for multi-node Gray-Scott simulation
+# Format: hostname slots=N
+# Adjust slots based on CPU cores per node
+
+node3 slots=8
+node1 slots=8
+node2 slots=8
+node0 slots=8

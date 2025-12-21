@@ -366,7 +366,7 @@ int main(int argc, char* argv[])
                         std::cout << "\n*** SST CONNECTION STRING ***" << std::endl;
                         std::cout << line << std::endl;
                         std::cout << "\nRun this on receiver machine (choose your MPI ranks):" << std::endl;
-                        std::cout << "  mpirun -np <num_ranks> ./receiver \"" << line << "\"" << std::endl;
+                        std::cout << "  mpirun -np 8 ./receiver \"" << line << "\"" << std::endl;
                         std::cout << std::string(60, '=') << std::endl;
                         std::cout << "\nWaiting for receiver to connect..." << std::endl;
                         break;
