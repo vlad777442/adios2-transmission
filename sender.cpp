@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
             {"QueueLimit", "5"},
             {"QueueFullPolicy", "Block"},
             {"ControlTransport", "sockets"},  // Use TCP sockets for WAN
-            {"DataTransport", "sockets"},
+            {"DataTransport", "evpath"},  // evpath DataPlane uses sockets internally
             {"OpenTimeoutSecs", "300"}        // 5 minute timeout for WAN
         });
         

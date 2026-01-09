@@ -35,7 +35,7 @@ cd "${SCRIPT_DIR}/build"
 MPI_OPTS="--mca btl_tcp_if_include 10.10.1.0/24 --mca oob_tcp_if_include 10.10.1.0/24"
 
 if [ -n "$HOSTFILE" ]; then
-    mpirun -np ${NUM_RANKS} ${MPI_OPTS} --hostfile "${SCRIPT_DIR}/${HOSTFILE}" ./gs_sender ${GRID_SIZE} ${TOTAL_STEPS} ${OUTPUT_INTERVAL} ${CONTACT_NAME}
+    mpirun -np ${NUM_RANKS} ${MPI_OPTS} --hostfile "${SCRIPT_DIR}/${HOSTFILE}" --map-by node ./gs_sender ${GRID_SIZE} ${TOTAL_STEPS} ${OUTPUT_INTERVAL} ${CONTACT_NAME}
 else
     mpirun -np ${NUM_RANKS} ./gs_sender ${GRID_SIZE} ${TOTAL_STEPS} ${OUTPUT_INTERVAL} ${CONTACT_NAME}
 fi

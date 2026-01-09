@@ -11,10 +11,10 @@ HOSTFILE="${SCRIPT_DIR}/hostfile.txt"
 
 # MPI configurations to test: "ranks nodes_description"
 CONFIGS=(
-    "1 single_node"
-    "2 single_node"
-    "4 single_node"
-    "8 single_node"
+    # "1 single_node"
+    # "2 single_node"
+    # "4 single_node"
+    # "8 single_node"
     "4 multi_node"
     "8 multi_node"
     "12 multi_node"
@@ -58,14 +58,14 @@ for CONFIG in "${CONFIGS[@]}"; do
     TEMP_OUTPUT=$(mktemp)
     
     if [ "$NODE_TYPE" == "multi_node" ]; then
-        # Multi-node run with hostfile
-        timeout 300 mpirun -np ${RANKS} ${MPI_OPTS} --hostfile "${HOSTFILE}" \
+        # Multi-node run with hostfile (--map-by node distributes ranks evenly across nodes)
+        timeout 1000 mpirun -np ${RANKS} ${MPI_OPTS} --hostfile "${HOSTFILE}" --map-by node \
             -x UCX_TLS=tcp -x UCX_NET_DEVICES=all \
             -x LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH \
             ./gs_sender ${GRID_SIZE} ${TOTAL_STEPS} ${OUTPUT_INTERVAL} benchmark-test 2>&1 | tee "${TEMP_OUTPUT}"
     else
         # Single node run
-        timeout 300 mpirun -np ${RANKS} \
+        timeout 1000 mpirun -np ${RANKS} \
             -x UCX_TLS=tcp -x UCX_NET_DEVICES=all \
             -x LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH \
             ./gs_sender ${GRID_SIZE} ${TOTAL_STEPS} ${OUTPUT_INTERVAL} benchmark-test 2>&1 | tee "${TEMP_OUTPUT}"

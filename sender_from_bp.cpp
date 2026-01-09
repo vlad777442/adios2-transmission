@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
             {"QueueLimit", "5"},
             {"QueueFullPolicy", "Block"},
             {"ControlTransport", "sockets"},
-            {"DataTransport", "sockets"},
+            {"DataTransport", "evpath"},  // evpath DataPlane uses sockets internally
             {"OpenTimeoutSecs", "300"},
             {"MarshalMethod", "BP5"}
         });

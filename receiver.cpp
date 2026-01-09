@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
         // Set parameters for WAN
         ioRead.SetParameters({
             {"ControlTransport", "sockets"},
-            {"DataTransport", "sockets"},
+            {"DataTransport", "evpath"},  // evpath DataPlane uses sockets internally
             {"OpenTimeoutSecs", "300"}
         });
         
